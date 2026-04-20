@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>進路指導まとめ テンプレート</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    .tab-btn.active { @apply bg-white text-blue-700 border-b-2 border-blue-600 font-bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    input[type="number"], input[type="text"], textarea {
+      @apply border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-300;
+    }
+    .section-title { @apply text-base font-bold text-gray-700 mb-3 border-l-4 border-blue-400 pl-2; }
+    .table-input { @apply border border-gray-200 text-center text-sm p-1; }
+    .table-header { @apply bg-gray-100 text-xs font-semibold text-gray-600 text-center p-2 border border-gray-200; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- ヘッダー -->
+<header class="bg-white shadow-sm sticky top-0 z-10">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+    <h1 class="text-lg font-bold text-gray-800">進路指導まとめ テンプレート</h1>
+    <div class="flex gap-2 flex-wrap justify-end">
+      <label class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-4 py-2 rounded border border-gray-300 transition cursor-pointer">
+        📥 インポート
+        <input type="file" id="importFile" accept=".json,.csv" class="hidden" onchange="importData(this)" />
+      </label>
+      <button onclick="exportData()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-4 py-2 rounded border border-gray-300 transition">📤 エクスポート</button>
+      <button onclick="saveData()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-4 py-2 rounded border border-gray-300 transition">💾 保存</button>
+      <button onclick="openPrintPreview()" class="bg-green-600 hover:bg-green-700 text-white text-sm px-5 py-2 rounded shadow transition">🖨️ 印刷プレビュー</button>
+    </div>
+  </div>
+  <!-- タブ -->
+  <div class="max-w-5xl mx-auto px-4 flex gap-1 overflow-x-auto pb-0 border-t border-gray-100">
+    <button class="tab-btn active text-sm px-3 py-2 whitespace-nowrap" onclick="switchTab(0)">① 基本情報</button>
+    <button class="tab-btn text-sm px-3 py-2 whitespace-nowrap" onclick="switchTab(1)">② 卒業者全体</button>
+    <button class="tab-btn text-sm px-3 py-2 whitespace-nowrap" onclick="switchTab(2)">③ 学科別進路</button>
+    <button class="tab-btn text-sm px-3 py-2 whitespace-nowrap" onclick="switchTab(3)">④ 職種内訳</button>
+    <button class="tab-btn text-sm px-3 py-2 whitespace-nowrap" onclick="switchTab(4)">⑤ 求人推移</button>
+    <button class="tab-btn text-sm px-3 py-2 whitespace-nowrap" onclick="switchTab(5)">⑥ 受験方法</button>
+    <button class="tab-btn text-sm px-3 py-2 whitespace-nowrap" onclick="switchTab(6)">⑦ 就職先</button>
+    <button class="tab-btn text-sm px-3 py-2 whitespace-nowrap" onclick="switchTab(7)">⑧ 進学先</button>
+    <button class="tab-btn text-sm px-3 py-2 whitespace-nowrap" onclick="switchTab(8)">⑨ 学科別詳細</button>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-6">
+
+<!-- ① 基本情報 -->
+<div class="tab-content active" id="tab-0">
+  <p class="section-title">基本情報</p>
+  <div class="bg-white rounded-lg shadow-sm p-6 grid grid-cols-2 gap-4">
+    <div>
+      <label class="text-xs text-gray-500 block mb-1">年度（例：令和７年度）</label>
+      <input type="text" id="nendo" value="令和７年度" />
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 block mb-1">学校名</label>
+      <input type="text" id="schoolName" value="愛知県立古知野高等学校" />
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 block mb-1">部署名</label>
+      <input type="text" id="deptName" value="進路指導部" />
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 block mb-1">現在日付（例：令和８年３月１９日）</label>
+      <input type="text" id="currentDate" value="令和８年３月１９日" />
+    </div>
+  </div>
+  <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
+    💡 入力データは「保存」ボタンでブラウザに保存されます。次回アクセス時も残ります。
+  </div>
+</div>
+
+<!-- ② 卒業者全体 -->
+<div class="tab-content" id="tab-1">
+  <p class="section-title">１ 卒業者全体</p>
+  <div class="bg-white rounded-lg shadow-sm p-6">
+    <p class="text-sm font-semibold text-gray-600 mb-3">今年度データ</p>
+    <div class="grid grid-cols-2 gap-6 mb-6">
+      <div>
+        <p class="text-xs text-gray-500 mb-2 font-medium">就職者</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-xs text-gray-500">学校斡旋</label><input type="number" id="e_gakkou" value="67" /></div>
+          <div><label class="text-xs text-gray-500">斡旋外</label><input type="number" id="e_outside" value="1" /></div>
+          <div><label class="text-xs text-gray-500">公務</label><input type="number" id="e_koumu" value="0" /></div>
+          <div><label class="text-xs text-gray-500">就職合計</label><input type="number" id="e_total" value="68" /></div>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 mb-2 font-medium">進学者</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-xs text-gray-500">大学</label><input type="number" id="s_daigaku" value="32" /></div>
+          <div><label class="text-xs text-gray-500">短期大学</label><input type="number" id="s_tanki" value="7" /></div>
+          <div><label class="text-xs text-gray-500">専門学校</label><input type="number" id="s_senmon" value="47" /></div>
+          <div><label class="text-xs text-gray-500">大学校・准看護</label><input type="number" id="s_daigakkou" value="2" /></div>
+          <div><label class="text-xs text-gray-500">その他</label><input type="number" id="s_other" value="0" /></div>
+          <div><label class="text-xs text-gray-500">進学合計</label><input type="number" id="s_total" value="88" /></div>
+        </div>
+      </div>
+    </div>
+    <hr class="my-4" />
+    <p class="text-sm font-semibold text-gray-600 mb-3">昨年度データ（比較用）</p>
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <p class="text-xs text-gray-500 mb-2 font-medium">就職者</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-xs text-gray-500">学校斡旋</label><input type="number" id="le_gakkou" value="74" /></div>
+          <div><label class="text-xs text-gray-500">斡旋外</label><input type="number" id="le_outside" value="4" /></div>
+          <div><label class="text-xs text-gray-500">公務</label><input type="number" id="le_koumu" value="2" /></div>
+          <div><label class="text-xs text-gray-500">就職合計</label><input type="number" id="le_total" value="80" /></div>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 mb-2 font-medium">進学者</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-xs text-gray-500">大学</label><input type="number" id="ls_daigaku" value="34" /></div>
+          <div><label class="text-xs text-gray-500">短期大学</label><input type="number" id="ls_tanki" value="3" /></div>
+          <div><label class="text-xs text-gray-500">専門学校</label><input type="number" id="ls_senmon" value="67" /></div>
+          <div><label class="text-xs text-gray-500">大学校・准看護</label><input type="number" id="ls_daigakkou" value="0" /></div>
+          <div><label class="text-xs text-gray-500">その他</label><input type="number" id="ls_other" value="8" /></div>
+          <div><label class="text-xs text-gray-500">進学合計</label><input type="number" id="ls_total" value="104" /></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ 学科別進路 -->
+<div class="tab-content" id="tab-2">
+  <p class="section-title">２ 学科別進路状況</p>
+  <div class="bg-white rounded-lg shadow-sm p-6 overflow-x-auto">
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr>
+          <th class="table-header" colspan="2">種別</th>
+          <th class="table-header" colspan="2">A科</th>
+          <th class="table-header" colspan="2">B科</th>
+          <th class="table-header" colspan="2">C科</th>
+          <th class="table-header" colspan="2">D科</th>
+          <th class="table-header">合計</th>
+        </tr>
+        <tr>
+          <th class="table-header" colspan="2"></th>
+          <th class="table-header">男</th><th class="table-header">女</th>
+          <th class="table-header">男</th><th class="table-header">女</th>
+          <th class="table-header">男</th><th class="table-header">女</th>
+          <th class="table-header">男</th><th class="table-header">女</th>
+          <th class="table-header"></th>
+        </tr>
+      </thead>
+      <tbody id="gakka-tbody">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ④ 職種内訳 -->
+<div class="tab-content" id="tab-3">
+  <p class="section-title">３ 就職者の職種内訳</p>
+  <div class="bg-white rounded-lg shadow-sm p-6 overflow-x-auto">
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr>
+          <th class="table-header">日本標準職業分類</th>
+          <th class="table-header" colspan="2">A科</th>
+          <th class="table-header" colspan="2">B科</th>
+          <th class="table-header" colspan="2">C科</th>
+          <th class="table-header" colspan="2">D科</th>
+          <th class="table-header">合計</th>
+        </tr>
+        <tr>
+          <th class="table-header"></th>
+          <th class="table-header">男</th><th class="table-header">女</th>
+          <th class="table-header">男</th><th class="table-header">女</th>
+          <th class="table-header">男</th><th class="table-header">女</th>
+          <th class="table-header">男</th><th class="table-header">女</th>
+          <th class="table-header"></th>
+        </tr>
+      </thead>
+      <tbody id="shokushu-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ⑤ 求人推移 -->
+<div class="tab-content" id="tab-4">
+  <p class="section-title">４ 求人票数の推移</p>
+  <div class="bg-white rounded-lg shadow-sm p-6">
+    <div id="kyujin-rows" class="space-y-2"></div>
+    <button onclick="addKyujinRow()" class="mt-3 text-sm text-blue-600 hover:underline">+ 年度を追加</button>
+  </div>
+</div>
+
+<!-- ⑥ 受験方法 -->
+<div class="tab-content" id="tab-5">
+  <p class="section-title">５ 進学者の受験方法内訳</p>
+  <div class="bg-white rounded-lg shadow-sm p-6 overflow-x-auto">
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr>
+          <th class="table-header">種別</th>
+          <th class="table-header">指定校推薦</th>
+          <th class="table-header">公募推薦</th>
+          <th class="table-header">総合型</th>
+          <th class="table-header">一般</th>
+          <th class="table-header">合計</th>
+        </tr>
+      </thead>
+      <tbody id="juken-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ⑦ 就職先 -->
+<div class="tab-content" id="tab-6">
+  <p class="section-title">６ 学校斡旋就職者の就職先〔産業分類別〕</p>
+  <div class="bg-white rounded-lg shadow-sm p-6 space-y-4" id="employment-list">
+  </div>
+</div>
+
+<!-- ⑧ 進学先 -->
+<div class="tab-content" id="tab-7">
+  <p class="section-title">７ 進学先〔校種別〕</p>
+  <div class="bg-white rounded-lg shadow-sm p-6 space-y-4" id="school-list">
+  </div>
+</div>
+
+<!-- ⑨ 学科別詳細 -->
+<div class="tab-content" id="tab-8">
+  <p class="section-title">８ 学科別資料〔一部抜粋〕</p>
+  <div class="bg-white rounded-lg shadow-sm p-6" id="gakka-detail">
+  </div>
+</div>
+
+</main>
+
+<!-- トースト -->
+<div id="toast" class="fixed bottom-6 right-6 bg-gray-800 text-white text-sm px-5 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none">保存しました</div>
+
+<script>
+// ===================== データ定義 =====================
+const gakkaRows = [
+  { label: '就職', sub: '学校斡旋', key: 'e_gakkou' },
+  { label: '',    sub: '斡旋外',   key: 'e_sotsu' },
+  { label: '',    sub: '公務',     key: 'e_koumu2' },
+  { label: '進学', sub: '大学',    key: 's_daigaku2' },
+  { label: '',    sub: '短期大学', key: 's_tanki2' },
+  { label: '',    sub: '専門学校', key: 's_senmon2' },
+  { label: '',    sub: '大学校',   key: 's_daigakkou2' },
+  { label: '',    sub: '准看護',   key: 's_junkango' },
+  { label: 'その他', sub: '',      key: 'sonota' },
+  { label: '合計',  sub: '',       key: 'gokei' },
+];
+const departments = ['A','B','C','D'];
+const genders = ['男','女'];
+
+const shokushuRows = [
+  '法務・経営・文化芸術等','医療・看護・保健','保育・教育','事務','販売・営業',
+  '福祉・介護','サービス','警備・保安','製造・修理・塗装・製図等','配送・輸送・機械運転','運搬・清掃・包装・選別','合計'
+];
+
+const jukenRows = ['大学','短期大学','専門学校','大学校・准看護','その他','合計'];
+
+const employmentCategories = [
+  { key: 'emp_seizou',   label: '製造業' },
+  { key: 'emp_joho',    label: '情報通信業' },
+  { key: 'emp_unyu',    label: '運輸・郵便業' },
+  { key: 'emp_oroshi',  label: '卸売・小売業' },
+  { key: 'emp_kinyu',   label: '金融・保険業' },
+  { key: 'emp_gakujutsu', label: '学術研究、専門・技術サービス業' },
+  { key: 'emp_syukuhaku', label: '宿泊・飲食サービス業' },
+  { key: 'emp_seikatsu', label: '生活関連サービス・娯楽業' },
+  { key: 'emp_kyoiku',  label: '教育、学習支援業' },
+  { key: 'emp_iryo',    label: '医療・福祉' },
+  { key: 'emp_service', label: 'サービス業（ほかに分類されないもの）' },
+];
+
+const schoolCategories = [
+  { key: 'sch_daigaku', label: '大学・短期大学' },
+  { key: 'sch_senmon',  label: '専門学校' },
+  { key: 'sch_daigakkou', label: '大学校' },
+];
+
+const gakkaDetailDepts = [
+  { key: 'detail_ab', label: 'A/B科' },
+  { key: 'detail_c',  label: 'C科' },
+  { key: 'detail_d',  label: 'D科' },
+];
+
+// ===================== 初期化 =====================
+let appData = {};
+
+const defaultData = {
+  nendo: '令和７年度', schoolName: '愛知県立古知野高等学校', deptName: '進路指導部', currentDate: '令和８年３月１９日',
+  e_gakkou: 67, e_outside: 1, e_koumu: 0, e_total: 68,
+  s_daigaku: 32, s_tanki: 7, s_senmon: 47, s_daigakkou: 2, s_other: 0, s_total: 88,
+  le_gakkou: 74, le_outside: 4, le_koumu: 2, le_total: 80,
+  ls_daigaku: 34, ls_tanki: 3, ls_senmon: 67, ls_daigakkou: 0, ls_other: 8, ls_total: 192,
+
+  kyujin: [
+    {nendo:'H29',num:1047},{nendo:'H30',num:1221},{nendo:'R1',num:1352},{nendo:'R2',num:1032},
+    {nendo:'R3',num:1041},{nendo:'R4',num:1117},{nendo:'R5',num:1189},{nendo:'R6',num:1562},{nendo:'R7',num:1570}
+  ],
+
+  emp_seizou: 'トヨタ自動車、東海理化電機製作所、オークマ、グンゼ、リンナイ、兼房、稲葉製作所、リボン、\nサンハウス食品、シキボウ江南、カウパック、協同乳業、林鉄工所、日本紙工、福玉米粒麦、\nコイワボンドマニュファクチャリング、丸川製菓、春日井製菓、名工銘鈑、岩間織機製作所',
+  emp_joho: 'ハブ、フォーバル、中部国際空港旅客サービス',
+  emp_unyu: 'ＳＢＳロジスター、サカイ引越センター、日本梱包運輸倉庫、名鉄ＮＸ運輸、ＫＹＯＴＳＵ',
+  emp_oroshi: '新日本ファスナー、トラスコ中山、ほていや、チャンピオン７６、日伝、愛知イエローハット、三井食品工業',
+  emp_kinyu: '岐阜商工信用組合',
+  emp_gakujutsu: 'エディオン',
+  emp_syukuhaku: '名鉄犬山ホテル、ヴィ・ド・フランス',
+  emp_seikatsu: 'ボディワークセラピストエージェンシー、榮美容室、美容室イサ',
+  emp_kyoiku: '名鉄自動車学校',
+  emp_iryo: '江南厚生病院、西春日井福祉会、すいと福祉会、なごや福祉施設協会、ふなびきクリニック、ともいき福祉会、たんぽぽ福祉会',
+  emp_service: '熱田神宮、針綱神社、日本郵便',
+
+  sch_daigaku: '名城大学、愛知大学、大同大学、日本福祉大学、愛知学院大学、至学館大学、椙山女学園大学、\n名古屋商科大学、名古屋芸術大学、名古屋学院大学、名古屋経済大学、中部大学、岡崎大学、\n人間環境大学、桜花学園大学、岐阜聖徳学園大学、岐阜保健大学、愛知みずほ短期大学、\n修文大学短期大学部、名古屋柳城短期大学、大垣女子短期大学',
+  sch_senmon: 'あいちビジネス、愛知調理、大原簿記情報医療、中日美容、中部リハビリテーション、中京法律、\n東海工業、東海医療科学、東京ＩＴプログラミング＆会計、トライデントコンピュータ、\nトライデントデザイン、トライデント外国語・エアライン・ホテル、名古屋医療秘書福祉＆ＩＴ、\n名古屋こども、名古屋ウェディング＆ブライダル、名古屋工学院、名古屋辻学園調理、\n名古屋文理栄養士、名古屋文化学園保育、名古屋ビジュアルアーツ、名古屋ビューティーアート、\n名古屋デザイナー・アカデミー、名古屋ユマニテク調理製菓、名古屋ユマニテク歯科衛生、\n名古屋ビジネス・アカデミー、名古屋医専、名古屋リゾート＆スポーツ、ニチエイ調理、\n日本マンガ芸術学院、尾北看護、ＥＬＩＣビジネス＆公務員',
+  sch_daigakkou: '愛知保健看護',
+
+  detail_ab: {
+    shushoku: [
+      {company:'トヨタ自動車 株式会社', shokushu:'技能職'},
+      {company:'兼房 株式会社', shokushu:'製造職'},
+      {company:'岐阜商工信用組合', shokushu:'営業'},
+      {company:'株式会社 名鉄犬山ホテル', shokushu:'接客業務全般'},
+      {company:'熱田神宮 宮庁', shokushu:'巫女'},
+      {company:'江南厚生病院', shokushu:'看護助手'},
+      {company:'株式会社 ハブ', shokushu:'ソフトウェア開発技術者、プログラマー'},
+      {company:'協同乳業 株式会社', shokushu:'物流事務'},
+      {company:'株式会社 榮美容室', shokushu:'美容師（アシスタント）'},
+    ],
+    daigaku: [
+      {school:'名城大学', gakubu:'経営学部'},
+      {school:'日本福祉大学', gakubu:'経済学部'},
+      {school:'大同大学', gakubu:'情報学部'},
+      {school:'愛知大学', gakubu:'経営学部'},
+      {school:'名古屋芸術大学', gakubu:'芸術学部'},
+    ],
+    tanki: [
+      {school:'修文大学短期大学部', gakubu:'生活文化学科'},
+      {school:'大垣女子短期大学', gakubu:'デザイン美術学科'},
+    ],
+    senmon: [
+      {school:'名古屋こども専門学校', gakubu:'子ども総合学科'},
+      {school:'東海工業専門学校', gakubu:'建築工学学科'},
+      {school:'中日美容専門学校', gakubu:'トータルビューティー科'},
+      {school:'名古屋リゾート＆スポーツ専門学校', gakubu:'スポーツビジネス科'},
+      {school:'名古屋ユマニテク歯科衛生専門学校', gakubu:'歯科衛生学科'},
+    ]
+  },
+  detail_c: {
+    shushoku: [
+      {company:'株式会社 ほていや', shokushu:'呉服営業（総合職）'},
+      {company:'グンゼ 株式会社', shokushu:'検査・加工'},
+      {company:'春日井製菓 株式会社', shokushu:'製造包装に関する業務'},
+      {company:'株式会社 ヴィ・ド・フランス', shokushu:'店舗運営、製造、販売'},
+      {company:'オークマ 株式会社', shokushu:'基幹職（機械系製造）'},
+      {company:'ＳＢＳロジスター 株式会社', shokushu:'事務職'},
+      {company:'株式会社 愛知イエローハット', shokushu:'ピットメカニック（整備士養成）'},
+      {company:'中部国際空港 旅客サービス株式会社', shokushu:'販売職'},
+    ],
+    daigaku: [
+      {school:'人間環境大学', gakubu:'心理学部'},
+      {school:'岡崎大学', gakubu:'教育学部'},
+      {school:'椙山女学園大学', gakubu:'生活科学部'},
+      {school:'至学館大学', gakubu:'健康科学部'},
+    ],
+    tanki: [
+      {school:'愛知みずほ短期大学', gakubu:'生活学科'},
+      {school:'名古屋柳城短期大学', gakubu:'保育学科'},
+    ],
+    senmon: [
+      {school:'ニチエイ調理専門学校', gakubu:'食品技術管理専門士科'},
+      {school:'名古屋ユマニテク調理製菓専門学校', gakubu:'製菓・製パン本科'},
+      {school:'名古屋辻学園調理専門学校', gakubu:'上級調理師科'},
+      {school:'あいちビジネス専門学校', gakubu:'医療秘書学科'},
+      {school:'名古屋ビューティーアート専門学校', gakubu:'ヘアメイク科'},
+      {school:'専門学校日本マンガ芸術学院', gakubu:'メディアアート学科'},
+    ]
+  },
+  detail_d: {
+    shushoku: [
+      {company:'社会福祉法人 たんぽぽ福祉会', shokushu:'介護職'},
+      {company:'社会福祉法人 西春日井福祉会', shokushu:'介護員'},
+      {company:'社会福祉法人 すいと福祉会', shokushu:'介護職'},
+      {company:'社会福祉法人 なごや福祉施設協会', shokushu:'介護職員'},
+      {company:'医療法人 ふなびきクリニック', shokushu:'介護職員'},
+      {company:'社会福祉法人 ともいき福祉会', shokushu:'介護職員'},
+      {company:'福玉米粒麦 株式会社', shokushu:'食料品製造加工'},
+      {company:'株式会社 東海理化電機製作所', shokushu:'技能職'},
+      {company:'サンハウス食品 株式会社', shokushu:'生産職'},
+    ],
+    daigaku: [
+      {school:'日本福祉大学', gakubu:'社会福祉学部 / 教育心理学部'},
+      {school:'中部大学', gakubu:'生命健康学部'},
+      {school:'岐阜保健大学', gakubu:'看護学部'},
+    ],
+    tanki: [],
+    senmon: [
+      {school:'尾北看護専門学校', gakubu:'看護科'},
+      {school:'東海医療科学専門学校', gakubu:'作業療法学科'},
+      {school:'中部リハビリテーション専門学校', gakubu:'理学療法学科'},
+      {school:'専門学校名古屋医専', gakubu:'高度看護学科'},
+      {school:'専門学校名古屋デザイナーアカデミー', gakubu:'アニメーション学科'},
+    ]
+  },
+
+  // 学科別テーブルの数値
+  gakka: {
+    e_gakkou:  [12,10,8,15,1,8,1,12],
+    e_sotsu:   [0,0,0,0,0,0,0,1],
+    e_koumu2:  [0,0,0,0,0,0,0,0],
+    s_daigaku2:[2,3,8,4,0,0,5,4,5],
+    s_tanki2:  [0,0,0,2,0,0,0,5,0],
+    s_senmon2: [2,9,6,5,4,15,1,6,0],
+    s_daigakkou2:[0,0,0,0,0,0,0,0,2],
+    s_junkango:[0,0,0,0,0,0,0,0,0],
+    sonota:    [1,0,0,2,0,2,0,1,0],
+    gokei:     [17,25,22,28,5,34,6,25,0],
+  },
+
+  // 職種内訳テーブルの数値
+  shokushu: {
+    '法務・経営・文化芸術等': [0,0,0,0,0,0,0,0],
+    '医療・看護・保健':       [0,0,1,0,0,0,0,0],
+    '保育・教育':             [0,0,0,0,0,0,0,0],
+    '事務':                   [0,3,2,6,0,0,0,1],
+    '販売・営業':             [1,1,0,0,0,3,0,0],
+    '福祉・介護':             [0,0,0,0,0,0,1,9],
+    'サービス':               [2,2,0,1,0,0,0,0],
+    '警備・保安':             [0,0,0,0,0,0,0,0],
+    '製造・修理・塗装・製図等':[8,2,3,6,1,4,0,3],
+    '配送・輸送・機械運転':   [1,0,1,0,0,0,0,0],
+    '運搬・清掃・包装・選別': [1,2,1,2,0,0,0,0],
+    '合計':                   [12,11,8,15,1,8,1,12],
+  },
+
+  // 受験方法テーブル
+  juken: {
+    '大学':         [18,4,0,9,0],
+    '短期大学':     [7,0,0,0,0],
+    '専門学校':     [19,2,0,27,0],
+    '大学校・准看護':[0,0,2,0,0],
+    'その他':       [0,0,0,0,0],
+    '合計':         [44,6,2,36,0],
+  },
+};
+
+// ===================== 初期描画 =====================
+function init() {
+  const saved = localStorage.getItem('shinroData');
+  appData = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultData));
+  fillBasicInfo();
+  buildGakkaTable();
+  buildShokushuTable();
+  buildKyujinRows();
+  buildJukenTable();
+  buildEmploymentList();
+  buildSchoolList();
+  buildGakkaDetail();
+}
+
+function fillBasicInfo() {
+  ['nendo','schoolName','deptName','currentDate',
+   'e_gakkou','e_outside','e_koumu','e_total',
+   's_daigaku','s_tanki','s_senmon','s_daigakkou','s_other','s_total',
+   'le_gakkou','le_outside','le_koumu','le_total',
+   'ls_daigaku','ls_tanki','ls_senmon','ls_daigakkou','ls_other','ls_total'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && appData[id] !== undefined) el.value = appData[id];
+  });
+}
+
+function buildGakkaTable() {
+  const tbody = document.getElementById('gakka-tbody');
+  tbody.innerHTML = '';
+  gakkaRows.forEach(row => {
+    const tr = document.createElement('tr');
+    let html = `<td class="table-header text-left px-2">${row.label}</td>
+                <td class="table-header text-left px-2">${row.sub}</td>`;
+    for (let i = 0; i < 8; i++) {
+      const val = (appData.gakka[row.key] || [])[i] || 0;
+      html += `<td class="table-input"><input type="number" class="w-16 text-center border-0 text-sm p-0" data-table="gakka" data-key="${row.key}" data-idx="${i}" value="${val}" onchange="updateGakka(this)" /></td>`;
+    }
+    const total = (appData.gakka[row.key] || []).slice(0,8).reduce((a,b)=>a+(+b||0),0);
+    html += `<td class="table-input font-bold" id="gakka-total-${row.key}">${total || ''}</td>`;
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateGakka(el) {
+  const key = el.dataset.key, idx = +el.dataset.idx;
+  if (!appData.gakka[key]) appData.gakka[key] = Array(8).fill(0);
+  appData.gakka[key][idx] = +el.value;
+  const total = appData.gakka[key].slice(0,8).reduce((a,b)=>a+(+b||0),0);
+  document.getElementById(`gakka-total-${key}`).textContent = total || '';
+}
+
+function buildShokushuTable() {
+  const tbody = document.getElementById('shokushu-tbody');
+  tbody.innerHTML = '';
+  shokushuRows.forEach(rowName => {
+    const tr = document.createElement('tr');
+    let html = `<td class="table-header text-left px-2">${rowName}</td>`;
+    for (let i = 0; i < 8; i++) {
+      const val = (appData.shokushu[rowName] || [])[i] || 0;
+      html += `<td class="table-input"><input type="number" class="w-16 text-center border-0 text-sm p-0" data-row="${rowName}" data-idx="${i}" value="${val}" onchange="updateShokushu(this)" /></td>`;
+    }
+    const total = (appData.shokushu[rowName] || []).slice(0,8).reduce((a,b)=>a+(+b||0),0);
+    html += `<td class="table-input font-bold">${total || ''}</td>`;
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateShokushu(el) {
+  const row = el.dataset.row, idx = +el.dataset.idx;
+  if (!appData.shokushu[row]) appData.shokushu[row] = Array(8).fill(0);
+  appData.shokushu[row][idx] = +el.value;
+}
+
+function buildKyujinRows() {
+  const container = document.getElementById('kyujin-rows');
+  container.innerHTML = '';
+  (appData.kyujin || []).forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'flex gap-3 items-center';
+    div.innerHTML = `
+      <div class="flex-1"><label class="text-xs text-gray-500">年度</label>
+        <input type="text" value="${item.nendo}" onchange="updateKyujin(${i},'nendo',this.value)" /></div>
+      <div class="flex-1"><label class="text-xs text-gray-500">求人数</label>
+        <input type="number" value="${item.num}" onchange="updateKyujin(${i},'num',+this.value)" /></div>
+      <button onclick="removeKyujinRow(${i})" class="text-red-400 hover:text-red-600 text-lg mt-4">×</button>`;
+    container.appendChild(div);
+  });
+}
+
+function updateKyujin(i, field, val) { appData.kyujin[i][field] = val; }
+function addKyujinRow() { appData.kyujin.push({nendo:'R8',num:0}); buildKyujinRows(); }
+function removeKyujinRow(i) { appData.kyujin.splice(i,1); buildKyujinRows(); }
+
+function buildJukenTable() {
+  const tbody = document.getElementById('juken-tbody');
+  tbody.innerHTML = '';
+  const cols = ['指定校推薦','公募推薦','総合型','一般','合計'];
+  jukenRows.forEach(rowName => {
+    const tr = document.createElement('tr');
+    let html = `<td class="table-header text-left px-2">${rowName}</td>`;
+    cols.forEach((col, i) => {
+      const val = (appData.juken[rowName] || [])[i] || 0;
+      html += `<td class="table-input"><input type="number" class="w-20 text-center border-0 text-sm p-0" data-row="${rowName}" data-idx="${i}" value="${val}" onchange="updateJuken(this)" /></td>`;
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateJuken(el) {
+  const row = el.dataset.row, idx = +el.dataset.idx;
+  if (!appData.juken[row]) appData.juken[row] = Array(5).fill(0);
+  appData.juken[row][idx] = +el.value;
+}
+
+function buildEmploymentList() {
+  const container = document.getElementById('employment-list');
+  container.innerHTML = '';
+  employmentCategories.forEach(cat => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <label class="text-sm font-semibold text-gray-700 block mb-1">【${cat.label}】</label>
+      <textarea rows="3" id="${cat.key}" class="text-sm" onchange="appData['${cat.key}']=this.value">${appData[cat.key]||''}</textarea>`;
+    container.appendChild(div);
+  });
+}
+
+function buildSchoolList() {
+  const container = document.getElementById('school-list');
+  container.innerHTML = '';
+  schoolCategories.forEach(cat => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <label class="text-sm font-semibold text-gray-700 block mb-1">【${cat.label}】</label>
+      <textarea rows="4" id="${cat.key}" class="text-sm" onchange="appData['${cat.key}']=this.value">${appData[cat.key]||''}</textarea>`;
+    container.appendChild(div);
+  });
+}
+
+function buildGakkaDetail() {
+  const container = document.getElementById('gakka-detail');
+  container.innerHTML = '';
+  gakkaDetailDepts.forEach(dept => {
+    const data = appData[dept.key] || {shushoku:[],daigaku:[],tanki:[],senmon:[]};
+    const section = document.createElement('div');
+    section.className = 'mb-8';
+    section.innerHTML = `<p class="text-sm font-bold text-gray-700 mb-3 bg-gray-100 px-3 py-1 rounded">【${dept.label}】</p>`;
+
+    const makeSubTable = (title, rows, fields, addFn, removeFn) => {
+      let html = `<p class="text-xs font-semibold text-gray-500 mt-3 mb-1">${title}</p>
+        <table class="w-full text-sm border-collapse mb-2">
+          <thead><tr>${fields.map(f=>`<th class="table-header">${f}</th>`).join('')}<th class="table-header w-8"></th></tr></thead>
+          <tbody>`;
+      rows.forEach((row, i) => {
+        html += `<tr>${Object.values(row).map((v,fi)=>`<td class="border border-gray-200 p-1"><input type="text" class="border-0 text-sm p-0 w-full" value="${v}" onchange="updateDetail('${dept.key}','${title==='就職'?'shushoku':title==='大学'?'daigaku':title==='短大'?'tanki':'senmon'}',${i},${fi},this.value)" /></td>`).join('')}
+          <td class="border border-gray-200 text-center"><button onclick="${removeFn}(${i})" class="text-red-400 hover:text-red-600">×</button></td></tr>`;
+      });
+      html += `</tbody></table>
+        <button onclick="${addFn}()" class="text-xs text-blue-600 hover:underline">＋ 追加</button>`;
+      return html;
+    };
+
+    section.innerHTML += makeSubTable('就職', data.shushoku, ['会社名','職種'], `()=>addDetail('${dept.key}','shushoku',{company:'',shokushu:''})`, `(i)=>removeDetail('${dept.key}','shushoku',i)`);
+    section.innerHTML += makeSubTable('大学', data.daigaku, ['大学名','学部'], `()=>addDetail('${dept.key}','daigaku',{school:'',gakubu:''})`, `(i)=>removeDetail('${dept.key}','daigaku',i)`);
+    section.innerHTML += makeSubTable('短大', data.tanki, ['短大名','学科'], `()=>addDetail('${dept.key}','tanki',{school:'',gakubu:''})`, `(i)=>removeDetail('${dept.key}','tanki',i)`);
+    section.innerHTML += makeSubTable('専門学校', data.senmon, ['学校名','学科'], `()=>addDetail('${dept.key}','senmon',{school:'',gakubu:''})`, `(i)=>removeDetail('${dept.key}','senmon',i)`);
+
+    container.appendChild(section);
+  });
+}
+
+function updateDetail(deptKey, subKey, rowIdx, fieldIdx, val) {
+  const row = appData[deptKey][subKey][rowIdx];
+  const keys = Object.keys(row);
+  row[keys[fieldIdx]] = val;
+}
+function addDetail(deptKey, subKey, template) {
+  appData[deptKey][subKey].push(JSON.parse(JSON.stringify(template)));
+  buildGakkaDetail();
+}
+function removeDetail(deptKey, subKey, i) {
+  appData[deptKey][subKey].splice(i, 1);
+  buildGakkaDetail();
+}
+
+// ===================== タブ切り替え =====================
+function switchTab(idx) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  document.querySelectorAll('.tab-content').forEach((c,i) => c.classList.toggle('active', i===idx));
+}
+
+// ===================== 保存 =====================
+function collectFormData() {
+  ['nendo','schoolName','deptName','currentDate',
+   'e_gakkou','e_outside','e_koumu','e_total',
+   's_daigaku','s_tanki','s_senmon','s_daigakkou','s_other','s_total',
+   'le_gakkou','le_outside','le_koumu','le_total',
+   'ls_daigaku','ls_tanki','ls_senmon','ls_daigakkou','ls_other','ls_total'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) appData[id] = isNaN(el.value) || el.type === 'text' ? el.value : +el.value;
+  });
+  employmentCategories.forEach(c => { const el=document.getElementById(c.key); if(el) appData[c.key]=el.value; });
+  schoolCategories.forEach(c => { const el=document.getElementById(c.key); if(el) appData[c.key]=el.value; });
+}
+
+function saveData() {
+  collectFormData();
+  localStorage.setItem('shinroData', JSON.stringify(appData));
+  showToast('保存しました');
+}
+
+function exportData() {
+  collectFormData();
+  const nendo = appData.nendo || '進路データ';
+  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `shinro_${nendo}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('エクスポートしました');
+}
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      appData = parsed;
+      localStorage.setItem('shinroData', JSON.stringify(appData));
+      fillBasicInfo();
+      buildGakkaTable();
+      buildShokushuTable();
+      buildKyujinRows();
+      buildJukenTable();
+      buildEmploymentList();
+      buildSchoolList();
+      buildGakkaDetail();
+      showToast('インポートしました');
+    } catch {
+      showToast('ファイルの読み込みに失敗しました');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  setTimeout(() => toast.style.opacity = '0', 2000);
+}
+
+// ===================== PDF生成 =====================
+function generatePDF() {
+  collectFormData();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const nendo = appData.nendo || '令和７年度';
+  const school = appData.schoolName || '';
+  const dept = appData.deptName || '';
+  const dateStr = appData.currentDate || '';
+
+  const W = 210, M = 15;
+  let y = 20;
+
+  const addPage = () => { doc.addPage(); y = 20; };
+  const checkPage = (need) => { if (y + need > 280) addPage(); };
+
+  // フォント（日本語非対応のため、日本語テキストは省略メッセージを代替表示 → 実際はフォント埋め込みが必要）
+  // ※ブラウザのjsPDFでは日本語フォント埋め込みが必要。ここではHTML→印刷を推奨メッセージとして表示
+  doc.setFontSize(10);
+  doc.text('※ PDFの日本語表示には専用フォントが必要なため、', M, y); y += 6;
+  doc.text('　 このページを印刷（Ctrl+P）するか、', M, y); y += 6;
+  doc.text('　 下記ボタンから印刷用ページを開くことをお勧めします。', M, y); y += 10;
+  doc.text('　 または「印刷プレビュー」ボタンを使用してください。', M, y);
+
+  doc.save(`進路指導まとめ_${nendo}.pdf`);
+
+  // 実際は印刷用ページを開く
+  openPrintPreview();
+}
+
+function openPrintPreview() {
+  collectFormData();
+  const d = appData;
+  const nendo = d.nendo || '令和７年度';
+
+  const kyujinHeaders = (d.kyujin||[]).map(k=>`<th>${k.nendo}</th>`).join('');
+  const kyujinValues = (d.kyujin||[]).map(k=>`<td>${k.num.toLocaleString()}</td>`).join('');
+
+  const gakkaRowDefs = [
+    {label:'就職',sub:'学校斡旋',key:'e_gakkou'},
+    {label:'',sub:'斡旋外',key:'e_sotsu'},
+    {label:'',sub:'公務',key:'e_koumu2'},
+    {label:'進学',sub:'大学',key:'s_daigaku2'},
+    {label:'',sub:'短期大学',key:'s_tanki2'},
+    {label:'',sub:'専門学校',key:'s_senmon2'},
+    {label:'',sub:'大学校',key:'s_daigakkou2'},
+    {label:'',sub:'准看護',key:'s_junkango'},
+    {label:'その他',sub:'',key:'sonota'},
+    {label:'合計',sub:'',key:'gokei'},
+  ];
+
+  const renderGakkaRows = () => gakkaRowDefs.map(row => {
+    const vals = (d.gakka||{})[row.key] || Array(8).fill(0);
+    const total = vals.slice(0,8).reduce((a,b)=>a+(+b||0),0);
+    const cells = vals.slice(0,8).map(v=>`<td>${v||''}</td>`).join('');
+    return `<tr><td>${row.label}</td><td>${row.sub}</td>${cells}<td><b>${total||''}</b></td></tr>`;
+  }).join('');
+
+  const renderShokushuRows = () => shokushuRows.map(name => {
+    const vals = (d.shokushu||{})[name] || Array(8).fill(0);
+    const total = vals.slice(0,8).reduce((a,b)=>a+(+b||0),0);
+    const cells = vals.slice(0,8).map(v=>`<td>${v||''}</td>`).join('');
+    return `<tr><td>${name}</td>${cells}<td><b>${total||''}</b></td></tr>`;
+  }).join('');
+
+  const renderJukenRows = () => jukenRows.map(name => {
+    const vals = (d.juken||{})[name] || Array(5).fill(0);
+    return `<tr><td>${name}</td>${vals.map(v=>`<td>${v||''}</td>`).join('')}</tr>`;
+  }).join('');
+
+  const renderEmpList = () => employmentCategories.map(c =>
+    `<p class="cat-title">【${c.label}】</p><p class="cat-body">${(d[c.key]||'').replace(/\n/g,'<br/>')}</p>`
+  ).join('');
+
+  const renderSchoolList = () => schoolCategories.map(c =>
+    `<p class="cat-title">【${c.label}】</p><p class="cat-body">${(d[c.key]||'').replace(/\n/g,'<br/>')}</p>`
+  ).join('');
+
+  const renderDetailTable = (deptKey, deptLabel) => {
+    const det = d[deptKey] || {shushoku:[],daigaku:[],tanki:[],senmon:[]};
+    const makeRows = (arr, f1, f2, label) => arr.map(r=>`<tr><td>${label}</td><td>${r[f1]||''}</td><td>${r[f2]||''}</td></tr>`).join('');
+    return `<p class="cat-title">【${deptLabel}】</p>
+    <table class="detail-tbl">
+      <colgroup><col style="width:15%"><col style="width:45%"><col style="width:40%"></colgroup>
+      <thead><tr><th>種別</th><th>学校・会社名</th><th>学部・職種</th></tr></thead>
+      <tbody>
+        ${makeRows(det.shushoku,'company','shokushu','就　職')}
+        ${makeRows(det.daigaku,'school','gakubu','大　学')}
+        ${makeRows(det.tanki,'school','gakubu','短　大')}
+        ${makeRows(det.senmon,'school','gakubu','専門学校')}
+      </tbody>
+    </table>`;
+  };
+
+  const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+  <title>${nendo} 進路指導まとめ</title>
+  <style>
+    @page { size: A4; margin: 15mm 12mm; }
+    body { font-family: "MS PGothic", "Hiragino Kaku Gothic ProN", sans-serif; font-size: 9pt; color: #000; }
+    h1 { text-align:center; font-size:14pt; margin:0 0 6mm; }
+    h2 { font-size:10pt; margin:6mm 0 2mm; border-bottom:1px solid #666; padding-bottom:1mm; }
+    table { border-collapse:collapse; width:100%; margin-bottom:3mm; font-size:8pt; }
+    th,td { border:1px solid #888; padding:1mm 2mm; text-align:center; }
+    th { background:#f0f0f0; font-weight:bold; }
+    td:first-child { text-align:left; }
+    .cat-title { font-weight:bold; margin:2mm 0 0.5mm; font-size:9pt; }
+    .cat-body { margin:0 0 2mm; font-size:8pt; padding-left:4mm; line-height:1.6; }
+    .detail-tbl th, .detail-tbl td { font-size:7.5pt; }
+    .footer { text-align:right; font-size:7pt; margin-top:2mm; }
+    .page-break { page-break-before: always; }
+    .header-sub { text-align:right; font-size:8pt; color:#555; margin-bottom:2mm; }
+  </style>
+  </head><body>
+  <h1>${nendo}　進路指導まとめ</h1>
+  <p class="header-sub">${school}　${dept}</p>
+
+  <h2>１　卒業者全体</h2>
+  <table>
+    <thead>
+      <tr><th colspan="2">就職者（${d.e_total||0}）</th><th colspan="5">進学者（${d.s_total||0}）</th><th rowspan="2">その他</th><th rowspan="2">合計</th></tr>
+      <tr><th colspan="2">民間企業</th><th>公務</th><th>大学</th><th>短期大学</th><th>専門学校</th><th>大学校・准看護</th></tr>
+      <tr><th>学校斡旋</th><th>斡旋外</th><th></th><th></th><th></th><th></th><th></th><th></th><th></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>${d.e_gakkou||0}</td><td>${d.e_outside||0}</td><td>${d.e_koumu||0}</td><td>${d.s_daigaku||0}</td><td>${d.s_tanki||0}</td><td>${d.s_senmon||0}</td><td>${d.s_daigakkou||0}</td><td>${d.s_other||0}</td><td>${(+d.e_total||0)+(+d.s_total||0)}</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:8pt;margin:1mm 0">[昨年度資料]</p>
+  <table>
+    <thead>
+      <tr><th colspan="2">就職者（${d.le_total||0}）</th><th colspan="5">進学者（${d.ls_total||0}）</th><th rowspan="2">その他</th><th rowspan="2">合計</th></tr>
+      <tr><th colspan="2">民間企業</th><th>公務</th><th>大学</th><th>短期大学</th><th>専門学校</th><th>大学校・准看護</th></tr>
+      <tr><th>学校斡旋</th><th>斡旋外</th><th></th><th></th><th></th><th></th><th></th><th></th><th></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>${d.le_gakkou||0}</td><td>${d.le_outside||0}</td><td>${d.le_koumu||0}</td><td>${d.ls_daigaku||0}</td><td>${d.ls_tanki||0}</td><td>${d.ls_senmon||0}</td><td>${d.ls_daigakkou||0}</td><td>${d.ls_other||0}</td><td>${(+d.le_total||0)+(+d.ls_total||0)}</td></tr>
+    </tbody>
+  </table>
+
+  <h2>２　学科別進路状況</h2>
+  <table>
+    <thead>
+      <tr><th colspan="2" rowspan="2">種別</th><th colspan="2">A科</th><th colspan="2">B科</th><th colspan="2">C科</th><th colspan="2">D科</th><th rowspan="2">合計</th></tr>
+      <tr><th>男</th><th>女</th><th>男</th><th>女</th><th>男</th><th>女</th><th>男</th><th>女</th></tr>
+    </thead>
+    <tbody>${renderGakkaRows()}</tbody>
+  </table>
+
+  <h2>３　就職者の職種内訳</h2>
+  <table>
+    <thead>
+      <tr><th rowspan="2">日本標準職業分類</th><th colspan="2">A科</th><th colspan="2">B科</th><th colspan="2">C科</th><th colspan="2">D科</th><th rowspan="2">合計</th></tr>
+      <tr><th>男</th><th>女</th><th>男</th><th>女</th><th>男</th><th>女</th><th>男</th><th>女</th></tr>
+    </thead>
+    <tbody>${renderShokushuRows()}</tbody>
+  </table>
+  <p class="footer">${dateStr}現在</p>
+
+  <div class="page-break"></div>
+  <h1 style="font-size:11pt;text-align:left">${nendo}　進路指導まとめ　　${school}　${dept}</h1>
+
+  <h2>４　求人票数の推移</h2>
+  <table><thead><tr><th>年度</th>${kyujinHeaders}</tr></thead>
+  <tbody><tr><td>求人数</td>${kyujinValues}</tr></tbody></table>
+
+  <h2>５　進学者の受験方法内訳</h2>
+  <table>
+    <thead><tr><th>種別</th><th>指定校推薦</th><th>公募推薦</th><th>総合型</th><th>一般</th><th>合計</th></tr></thead>
+    <tbody>${renderJukenRows()}</tbody>
+  </table>
+
+  <h2>６　学校斡旋就職者の就職先〔産業分類別　順不同〕</h2>
+  ${renderEmpList()}
+
+  <div class="page-break"></div>
+  <h2>７　進学先〔校種別　順不同〕</h2>
+  ${renderSchoolList()}
+
+  <h2>８　学科別資料〔一部抜粋　順不同〕</h2>
+  ${renderDetailTable('detail_ab','A/B科')}
+  ${renderDetailTable('detail_c','C科')}
+  ${renderDetailTable('detail_d','D科')}
+
+  <script>window.onload=()=>window.print()<\/script>
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+init();
+</script>
+</body>
+</html>
